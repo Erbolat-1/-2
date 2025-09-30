@@ -2,66 +2,24 @@
 const adminUser = { username: "admin", password: "12345" };
 let currentUser = null;
 let currentTestIndex = null;
+let editingTestIndex = null;
 
-// ==== Логин ====
+// ==== Авторизация ====
 function handleLogin() {
-  const username = document.getElementById("login-username").value;
-  const password = document.getElementById("login-password").value;
+  const username = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value.trim();
 
+  // вход как админ
   if (username === adminUser.username && password === adminUser.password) {
     currentUser = "admin";
     showAdminPanel();
     return;
   }
-// ==== Работа с пользователями ====
-function getStudents() {
-  return JSON.parse(localStorage.getItem("students")) || [];
-}
 
-function saveStudents(students) {
-  localStorage.setItem("students", JSON.stringify(students));
-}
-
-// ==== Создание студента (только админом) ====
-function createStudent() {
-  const login = document.getElementById("student-login").value.trim();
-  const pass = document.getElementById("student-pass").value.trim();
-
-  if (!login || !pass) {
-    alert("Введите логин и пароль");
-    return;
-  }
-
-  let students = getStudents();
-  if (students.find(s => s.username === login)) {
-    alert("Пользователь с таким логином уже существует");
-    return;
-  }
-
-  students.push({ username: login, password: pass });
-  saveStudents(students);
-
-  document.getElementById("student-login").value = "";
-  document.getElementById("student-pass").value = "";
-
-  loadStudents();
-}
-
-// ==== Отобразить список студентов ====
-function loadStudents() {
-  const list = document.getElementById("students-list");
-  const students = getStudents();
-
-  if (students.length === 0) {
-    list.innerHTML = "<p>Пользователей нет</p>";
-    return;
-  }
-
-  list.innerHTML = students.map(s => `<p>👤 ${s.username}</p>`).join("");
-}
-
+  // вход как студент
   const students = getStudents();
   const student = students.find(s => s.username === username && s.password === password);
+
   if (student) {
     currentUser = username;
     showStudentTests();
@@ -79,7 +37,7 @@ function logout() {
   document.getElementById("student-tests").classList.add("hidden");
 }
 
-// ==== Управление студентами (только админ) ====
+// ==== Управление студентами ====
 function getStudents() {
   return JSON.parse(localStorage.getItem("students")) || [];
 }
@@ -89,8 +47,8 @@ function saveStudents(students) {
 }
 
 function createStudent() {
-  const login = document.getElementById("student-login").value;
-  const pass = document.getElementById("student-pass").value;
+  const login = document.getElementById("student-login").value.trim();
+  const pass = document.getElementById("student-pass").value.trim();
 
   if (!login || !pass) {
     alert("Введите логин и пароль");
@@ -105,8 +63,10 @@ function createStudent() {
 
   students.push({ username: login, password: pass });
   saveStudents(students);
+
   document.getElementById("student-login").value = "";
   document.getElementById("student-pass").value = "";
+
   loadStudents();
 }
 
@@ -124,7 +84,7 @@ function loadStudents() {
   `).join("");
 }
 
-// ==== Управление тестами (только админ) ====
+// ==== Управление тестами (админ) ====
 function getTests() {
   return JSON.parse(localStorage.getItem("tests")) || [];
 }
@@ -134,7 +94,7 @@ function saveTests(tests) {
 }
 
 function createTest() {
-  const title = document.getElementById("test-title").value;
+  const title = document.getElementById("test-title").value.trim();
   if (!title) {
     alert("Введите название теста");
     return;
@@ -148,33 +108,81 @@ function createTest() {
   loadAdminTests();
 }
 
-function addQuestion(index) {
-  const text = prompt("Введите текст вопроса:");
-  if (!text) return;
+// ==== Вопросы ====
+function addQuestion(testIndex) {
+  editingTestIndex = testIndex;
+  document.getElementById("admin-panel").classList.add("hidden");
+  document.getElementById("question-form").classList.remove("hidden");
 
+  document.getElementById("question-text").value = "";
+  document.getElementById("answers-box").innerHTML = "";
+  addAnswerField();
+  addAnswerField();
+}
+
+function addAnswerField() {
+  const box = document.getElementById("answers-box");
+  const id = Date.now();
+
+  const div = document.createElement("div");
+  div.className = "answer-item";
+  div.innerHTML = `
+    <input type="radio" name="correct" value="${id}" />
+    <input type="text" placeholder="Вариант ответа" data-id="${id}" />
+    <button type="button" onclick="this.parentElement.remove()">❌</button>
+  `;
+  box.appendChild(div);
+}
+
+function saveQuestion() {
+  const questionText = document.getElementById("question-text").value.trim();
+  if (!questionText) {
+    alert("Введите текст вопроса");
+    return;
+  }
+
+  const answersInputs = document.querySelectorAll("#answers-box input[type='text']");
   let answers = [];
-  let answer;
-  while ((answer = prompt("Введите вариант ответа (или пусто для завершения):"))) {
-    answers.push(answer);
-  }
+  let ids = [];
+  answersInputs.forEach(inp => {
+    if (inp.value.trim()) {
+      answers.push(inp.value.trim());
+      ids.push(inp.dataset.id);
+    }
+  });
 
-  if (answers.length === 0) {
-    alert("Добавьте хотя бы один вариант ответа");
+  if (answers.length < 2) {
+    alert("Добавьте минимум два варианта ответа");
     return;
   }
 
-  const correct = parseInt(prompt("Введите номер правильного ответа (1-" + answers.length + "):")) - 1;
-  if (isNaN(correct) || correct < 0 || correct >= answers.length) {
-    alert("Неверный номер правильного ответа");
+  const correctRadio = document.querySelector("#answers-box input[type='radio']:checked");
+  if (!correctRadio) {
+    alert("Выберите правильный ответ");
     return;
   }
+
+  const correctId = correctRadio.value;
+  const correctIndex = ids.indexOf(correctId);
 
   let tests = getTests();
-  tests[index].questions.push({ text, answers, correct });
+  tests[editingTestIndex].questions.push({
+    text: questionText,
+    answers,
+    correct: correctIndex
+  });
   saveTests(tests);
+
+  cancelQuestion();
   loadAdminTests();
 }
 
+function cancelQuestion() {
+  document.getElementById("question-form").classList.add("hidden");
+  document.getElementById("admin-panel").classList.remove("hidden");
+}
+
+// ==== Отображение тестов (админ) ====
 function loadAdminTests() {
   const tests = getTests();
   const list = document.getElementById("admin-tests-list");
@@ -192,7 +200,7 @@ function loadAdminTests() {
   `).join("");
 }
 
-// ==== Студенты ====
+// ==== Студенты: выбор теста ====
 function showStudentTests() {
   document.getElementById("auth").classList.add("hidden");
   document.getElementById("student-tests").classList.remove("hidden");
@@ -304,80 +312,6 @@ document.addEventListener("keydown", function(e) {
     alert("Скриншоты и сохранение запрещены!");
   }
 });
-let editingTestIndex = null; // в какой тест добавляем вопрос
-
-function addQuestion(testIndex) {
-  editingTestIndex = testIndex;
-  document.getElementById("admin-panel").classList.add("hidden");
-  document.getElementById("question-form").classList.remove("hidden");
-
-  document.getElementById("question-text").value = "";
-  document.getElementById("answers-box").innerHTML = "";
-  addAnswerField();
-  addAnswerField();
-}
-
-function addAnswerField() {
-  const box = document.getElementById("answers-box");
-  const id = Date.now();
-
-  const div = document.createElement("div");
-  div.className = "answer-item";
-  div.innerHTML = `
-    <input type="radio" name="correct" value="${id}" />
-    <input type="text" placeholder="Вариант ответа" data-id="${id}" />
-    <button onclick="this.parentElement.remove()">❌</button>
-  `;
-  box.appendChild(div);
-}
-
-function saveQuestion() {
-  const questionText = document.getElementById("question-text").value.trim();
-  if (!questionText) {
-    alert("Введите текст вопроса");
-    return;
-  }
-
-  const answersInputs = document.querySelectorAll("#answers-box input[type='text']");
-  let answers = [];
-  let ids = [];
-  answersInputs.forEach(inp => {
-    if (inp.value.trim()) {
-      answers.push(inp.value.trim());
-      ids.push(inp.dataset.id);
-    }
-  });
-
-  if (answers.length < 2) {
-    alert("Добавьте минимум два варианта ответа");
-    return;
-  }
-
-  const correctRadio = document.querySelector("#answers-box input[type='radio']:checked");
-  if (!correctRadio) {
-    alert("Выберите правильный ответ");
-    return;
-  }
-
-  const correctId = correctRadio.value;
-  const correctIndex = ids.indexOf(correctId);
-
-  let tests = getTests();
-  tests[editingTestIndex].questions.push({
-    text: questionText,
-    answers,
-    correct: correctIndex
-  });
-  saveTests(tests);
-
-  cancelQuestion();
-  loadAdminTests();
-}
-
-function cancelQuestion() {
-  document.getElementById("question-form").classList.add("hidden");
-  document.getElementById("admin-panel").classList.remove("hidden");
-}
 
 window.onblur = function() {
   const testPanel = document.getElementById("student-panel");
@@ -385,4 +319,3 @@ window.onblur = function() {
     testPanel.innerHTML += `<div class="warning">⚠ Вы покинули окно — тест может быть аннулирован!</div>`;
   }
 };
-
