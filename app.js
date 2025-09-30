@@ -258,6 +258,80 @@ document.addEventListener("keydown", function(e) {
     alert("Скриншоты и сохранение запрещены!");
   }
 });
+let editingTestIndex = null; // в какой тест добавляем вопрос
+
+function addQuestion(testIndex) {
+  editingTestIndex = testIndex;
+  document.getElementById("admin-panel").classList.add("hidden");
+  document.getElementById("question-form").classList.remove("hidden");
+
+  document.getElementById("question-text").value = "";
+  document.getElementById("answers-box").innerHTML = "";
+  addAnswerField();
+  addAnswerField();
+}
+
+function addAnswerField() {
+  const box = document.getElementById("answers-box");
+  const id = Date.now();
+
+  const div = document.createElement("div");
+  div.className = "answer-item";
+  div.innerHTML = `
+    <input type="radio" name="correct" value="${id}" />
+    <input type="text" placeholder="Вариант ответа" data-id="${id}" />
+    <button onclick="this.parentElement.remove()">❌</button>
+  `;
+  box.appendChild(div);
+}
+
+function saveQuestion() {
+  const questionText = document.getElementById("question-text").value.trim();
+  if (!questionText) {
+    alert("Введите текст вопроса");
+    return;
+  }
+
+  const answersInputs = document.querySelectorAll("#answers-box input[type='text']");
+  let answers = [];
+  let ids = [];
+  answersInputs.forEach(inp => {
+    if (inp.value.trim()) {
+      answers.push(inp.value.trim());
+      ids.push(inp.dataset.id);
+    }
+  });
+
+  if (answers.length < 2) {
+    alert("Добавьте минимум два варианта ответа");
+    return;
+  }
+
+  const correctRadio = document.querySelector("#answers-box input[type='radio']:checked");
+  if (!correctRadio) {
+    alert("Выберите правильный ответ");
+    return;
+  }
+
+  const correctId = correctRadio.value;
+  const correctIndex = ids.indexOf(correctId);
+
+  let tests = getTests();
+  tests[editingTestIndex].questions.push({
+    text: questionText,
+    answers,
+    correct: correctIndex
+  });
+  saveTests(tests);
+
+  cancelQuestion();
+  loadAdminTests();
+}
+
+function cancelQuestion() {
+  document.getElementById("question-form").classList.add("hidden");
+  document.getElementById("admin-panel").classList.remove("hidden");
+}
 
 window.onblur = function() {
   const testPanel = document.getElementById("student-panel");
