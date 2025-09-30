@@ -50,6 +50,36 @@
     <div id="test-list"></div>
     <button onclick="logout()">Выйти</button>
   </div>
+<!-- Панель админа -->
+<div class="container hidden" id="admin-panel">
+  <h2>Панель администратора</h2>
+  <button onclick="logout()">Выйти</button>
+
+  <h3>Создать нового пользователя</h3>
+  <input type="text" id="student-login" placeholder="Логин студента" />
+  <input type="password" id="student-pass" placeholder="Пароль студента" />
+  <button onclick="createStudent()">Добавить</button>
+  <div id="students-list"></div>
+
+  <h3>Создать новый тест</h3>
+  <input type="text" id="test-title" placeholder="Название теста" />
+  <button onclick="createTest()">Создать тест</button>
+
+  <h3>Список тестов</h3>
+  <div id="admin-tests-list"></div>
+</div>
+
+<!-- Форма добавления вопроса -->
+<div class="container hidden" id="question-form">
+  <h2>Добавление вопроса</h2>
+  <input type="text" id="question-text" placeholder="Текст вопроса" />
+
+  <div id="answers-box"></div>
+  <button onclick="addAnswerField()">➕ Добавить вариант ответа</button>
+
+  <button onclick="saveQuestion()">Сохранить вопрос</button>
+  <button onclick="cancelQuestion()">Отмена</button>
+</div>
 
   <script src="app.js"></script>
 </body>
