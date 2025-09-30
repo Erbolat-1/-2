@@ -13,6 +13,52 @@ function handleLogin() {
     showAdminPanel();
     return;
   }
+// ==== Работа с пользователями ====
+function getStudents() {
+  return JSON.parse(localStorage.getItem("students")) || [];
+}
+
+function saveStudents(students) {
+  localStorage.setItem("students", JSON.stringify(students));
+}
+
+// ==== Создание студента (только админом) ====
+function createStudent() {
+  const login = document.getElementById("student-login").value.trim();
+  const pass = document.getElementById("student-pass").value.trim();
+
+  if (!login || !pass) {
+    alert("Введите логин и пароль");
+    return;
+  }
+
+  let students = getStudents();
+  if (students.find(s => s.username === login)) {
+    alert("Пользователь с таким логином уже существует");
+    return;
+  }
+
+  students.push({ username: login, password: pass });
+  saveStudents(students);
+
+  document.getElementById("student-login").value = "";
+  document.getElementById("student-pass").value = "";
+
+  loadStudents();
+}
+
+// ==== Отобразить список студентов ====
+function loadStudents() {
+  const list = document.getElementById("students-list");
+  const students = getStudents();
+
+  if (students.length === 0) {
+    list.innerHTML = "<p>Пользователей нет</p>";
+    return;
+  }
+
+  list.innerHTML = students.map(s => `<p>👤 ${s.username}</p>`).join("");
+}
 
   const students = getStudents();
   const student = students.find(s => s.username === username && s.password === password);
@@ -339,3 +385,4 @@ window.onblur = function() {
     testPanel.innerHTML += `<div class="warning">⚠ Вы покинули окно — тест может быть аннулирован!</div>`;
   }
 };
+
